@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npx eslint *)",
+      "Bash(npm install *)",
+      "Bash(npx playwright *)",
+      "Bash(curl -sf http://localhost:5175)",
+      "Bash(node \"C:/Users/Admin/AppData/Local/Temp/claude/c--Users-Admin-Desktop-Carrito-Web-Practica-2/22a8b4dd-b7da-47d3-b3db-6d1dfcd7c751/scratchpad/check-productcard.mjs\")",
+      "Bash(cp \"C:/Users/Admin/AppData/Local/Temp/claude/c--Users-Admin-Desktop-Carrito-Web-Practica-2/22a8b4dd-b7da-47d3-b3db-6d1dfcd7c751/scratchpad/check-productcard.mjs\" ./check-productcard.tmp.mjs)",
+      "Bash(node ./check-productcard.tmp.mjs)"
+    ]
+  }
+}
