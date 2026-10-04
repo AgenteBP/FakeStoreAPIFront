@@ -14,6 +14,9 @@ interface NavbarProps {
   user: AuthUser | null;
   onOpenLogin: () => void;
   onLogout: () => void;
+  onCheckout: () => void;
+  onOpenOrders: () => void;
+  onOpenAdmin: () => void;
 }
 
 function Navbar({
@@ -27,6 +30,9 @@ function Navbar({
   user,
   onOpenLogin,
   onLogout,
+  onCheckout,
+  onOpenOrders,
+  onOpenAdmin,
 }: NavbarProps) {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -139,6 +145,28 @@ function Navbar({
                   <p className="navbar-account-menu-email">{user.email}</p>
                   <button
                     type="button"
+                    className="navbar-account-link"
+                    onClick={() => {
+                      onOpenOrders();
+                      setIsAccountMenuOpen(false);
+                    }}
+                  >
+                    Mis compras
+                  </button>
+                  {user.role === "ADMIN" && (
+                    <button
+                      type="button"
+                      className="navbar-account-link"
+                      onClick={() => {
+                        onOpenAdmin();
+                        setIsAccountMenuOpen(false);
+                      }}
+                    >
+                      Panel de administración
+                    </button>
+                  )}
+                  <button
+                    type="button"
                     className="navbar-account-logout"
                     onClick={() => {
                       onLogout();
@@ -180,6 +208,10 @@ function Navbar({
               deleteProduct={deleteProduct}
               incrementProduct={incrementProduct}
               ressProduct={ressProduct}
+              onCheckout={() => {
+                setIsCartOpen(false);
+                onCheckout();
+              }}
             />
           </div>
         </div>

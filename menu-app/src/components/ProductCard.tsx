@@ -7,6 +7,8 @@ interface Props {
 }
 
 function ProductCard({ product, addToCart, onSelectProduct }: Props) {
+  const outOfStock = product.stock === 0;
+
   return (
     <div className="col-12 col-md-4 mb-4">
       <div
@@ -48,9 +50,10 @@ function ProductCard({ product, addToCart, onSelectProduct }: Props) {
               e.stopPropagation();
               addToCart(product);
             }}
-            aria-label={`Agregar ${product.title} al carrito`}
+            disabled={outOfStock}
+            aria-label={outOfStock ? `${product.title} sin stock` : `Agregar ${product.title} al carrito`}
           >
-            Agregar al carrito
+            {outOfStock ? "Sin stock" : "Agregar al carrito"}
           </button>
         </div>
       </div>

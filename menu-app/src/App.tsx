@@ -3,6 +3,8 @@ import type { Product } from "./types/Product";
 import type { AuthUser } from "./types/AuthUser";
 
 import { useCart } from "./hooks/useCart";
+import { getProducts } from "./services/productService";
+import { logout, restoreSession } from "./services/authService";
 import Navbar from "./components/Navbar";
 import ProductCard from "./components/ProductCard";
 import ProductModal from "./components/ProductModal";
@@ -10,6 +12,9 @@ import Toast from "./components/Toast";
 import FilterPanel from "./components/FilterPanel";
 import BannerCarousel from "./components/BannerCarousel";
 import LoginModal from "./components/LoginModal";
+import CheckoutModal from "./components/CheckoutModal";
+import MyOrdersModal from "./components/MyOrdersModal";
+import AdminPanel from "./components/admin/AdminPanel";
 
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -17,12 +22,18 @@ function App() {
   const [error, setError] = useState<string>("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("Agregado");
   const [toastKey, setToastKey] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  // Producto que se quiso agregar sin estar logueado: se agrega al carrito apenas inicia sesión
+  const [pendingProduct, setPendingProduct] = useState<Product | null>(null);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [showOrders, setShowOrders] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
 
   const {
     cart,
@@ -30,19 +41,91 @@ function App() {
     deleteProduct,
     incrementProduct,
     ressProduct,
+    clearCart,
     totalItems,
   } = useCart();
 
   // toastKey se incrementa en cada click: si el toast ya estaba visible,
   // fuerza el remount de <Toast> para reiniciar su temporizador de auto-cierre.
-  const handleAddToCart = useCallback(
+  const addAndNotify = useCallback(
     (product: Product) => {
-      addToCart(product);
+      const added = addToCart(product);
+      setToastMessage(added ? "Agregado" : "No hay más stock");
       setShowToast(true);
       setToastKey((k) => k + 1);
     },
     [addToCart]
   );
+
+  // Para comprar hay que estar logueado: sin sesión se guarda el producto y se abre el login
+  const handleAddToCart = useCallback(
+    (product: Product) => {
+      if (!user) {
+        setPendingProduct(product);
+        setShowLoginModal(true);
+        return;
+      }
+      addAndNotify(product);
+    },
+    [user, addAndNotify]
+  );
+
+  const handleLoginSuccess = (loggedInUser: AuthUser) => {
+    setUser(loggedInUser);
+    setShowLoginModal(false);
+    if (pendingProduct) {
+      addAndNotify(pendingProduct);
+      setPendingProduct(null);
+    }
+  };
+
+  const handleCloseLogin = useCallback(() => {
+    setShowLoginModal(false);
+    setPendingProduct(null);
+  }, []);
+
+  // El carrito es de cada usuario: al cerrar sesión se vacía
+  const handleLogout = () => {
+    logout();
+    setUser(null);
+    clearCart();
+    setShowCheckout(false);
+    setShowOrders(false);
+    setShowAdmin(false);
+  };
+
+  // El backend respondió 401 (el token venció): se cierra la sesión y se pide login de nuevo.
+  // A diferencia de handleLogout, el carrito se conserva para que pueda seguir comprando.
+  const handleSessionExpired = useCallback(() => {
+    logout();
+    setUser(null);
+    setShowCheckout(false);
+    setShowOrders(false);
+    setShowAdmin(false);
+    setShowLoginModal(true);
+  }, []);
+
+  // Vuelve a traer el catálogo para mostrar el stock actualizado (después de comprar, pagar o cancelar).
+  // Si falla, se sigue mostrando el catálogo anterior.
+  const refreshProducts = useCallback(() => {
+    getProducts()
+      .then(setProducts)
+      .catch(() => {});
+  }, []);
+
+  // El backend ya reservó el stock: se vacía el carrito y se actualiza el catálogo
+  const handleOrderCreated = () => {
+    clearCart();
+    refreshProducts();
+  };
+
+  const handleCloseCheckout = useCallback(() => setShowCheckout(false), []);
+  const handleCloseOrders = useCallback(() => setShowOrders(false), []);
+
+  const handleOpenOrders = () => {
+    setShowCheckout(false);
+    setShowOrders(true);
+  };
 
   const handleToastClose = useCallback(() => setShowToast(false), []);
 
@@ -69,17 +152,10 @@ function App() {
   });
 
   useEffect(() => {
-    fetch("https://fakestoreapi.com/products")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Ocurrio un error en la carga de datos");
-        }
-        return response.json();
-      })
+    getProducts()
       .then((data) => {
-        console.log("🚀 ~ App ~ data:", data)
         setProducts(data);
-        const prices = data.map((prod: Product) => prod.price);
+        const prices = data.map((prod) => prod.price);
         setPriceRange([Math.floor(Math.min(...prices)), Math.ceil(Math.max(...prices))]);
         setLoading(false);
       })
@@ -87,6 +163,13 @@ function App() {
         setLoading(false);
         setError("Ocurrio un error al cargar los productos");
       });
+  }, []);
+
+  // Si había una sesión guardada (token en localStorage) y sigue vigente, se recupera
+  useEffect(() => {
+    restoreSession().then((restoredUser) => {
+      if (restoredUser) setUser(restoredUser);
+    });
   }, []);
 
   if (loading) {
@@ -120,51 +203,66 @@ function App() {
         onSearchChange={setSearchTerm}
         user={user}
         onOpenLogin={() => setShowLoginModal(true)}
-        onLogout={() => setUser(null)}
+        onLogout={handleLogout}
+        onCheckout={() => setShowCheckout(true)}
+        onOpenOrders={handleOpenOrders}
+        onOpenAdmin={() => setShowAdmin(true)}
       />
 
-      <BannerCarousel />
+      {/* El panel reemplaza al catálogo mientras está abierto; solo existe para un ADMIN logueado */}
+      {user?.role === "ADMIN" && showAdmin ? (
+        <AdminPanel
+          admin={user}
+          onBackToStore={() => setShowAdmin(false)}
+          onSessionExpired={handleSessionExpired}
+          onStockChanged={refreshProducts}
+        />
+      ) : (
+        <>
+          <BannerCarousel />
 
-      <main className="container-fluid px-4 py-4">
-        {/* {normalizedSearch === "" && (
-          <h1 className="text-center fs-2 fw-bold mb-4 text-dark">
-            Catálogo de Productos
-          </h1>
-        )} */}
+          <main className="container-fluid px-4 py-4">
+            {/* {normalizedSearch === "" && (
+              <h1 className="text-center fs-2 fw-bold mb-4 text-dark">
+                Catálogo de Productos
+              </h1>
+            )} */}
 
-        <div className="row g-2">
-          <div className="col-12 col-md-auto">
-            <FilterPanel
-              categories={categories}
-              selectedCategories={selectedCategories}
-              onToggleCategory={handleToggleCategory}
-              minPrice={minPrice}
-              maxPrice={maxPrice}
-              priceRange={effectivePriceRange}
-              onPriceChange={setPriceRange}
-            />
-          </div>
-
-          <div className="col-12 col-md">
-            {filteredProducts.length === 0 ? (
-              <p className="text-center text-muted py-5">
-                No se encontraron productos
-              </p>
-            ) : (
-              <div className="row">
-                {filteredProducts.map((prod) => (
-                  <ProductCard
-                    key={prod.id}
-                    product={prod}
-                    addToCart={handleAddToCart}
-                    onSelectProduct={(p) => setSelectedProduct(p)}
-                  />
-                ))}
+            <div className="row g-2">
+              <div className="col-12 col-md-auto">
+                <FilterPanel
+                  categories={categories}
+                  selectedCategories={selectedCategories}
+                  onToggleCategory={handleToggleCategory}
+                  minPrice={minPrice}
+                  maxPrice={maxPrice}
+                  priceRange={effectivePriceRange}
+                  onPriceChange={setPriceRange}
+                />
               </div>
-            )}
-          </div>
-        </div>
-      </main>
+
+              <div className="col-12 col-md">
+                {filteredProducts.length === 0 ? (
+                  <p className="text-center text-muted py-5">
+                    No se encontraron productos
+                  </p>
+                ) : (
+                  <div className="row">
+                    {filteredProducts.map((prod) => (
+                      <ProductCard
+                        key={prod.id}
+                        product={prod}
+                        addToCart={handleAddToCart}
+                        onSelectProduct={(p) => setSelectedProduct(p)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </main>
+        </>
+      )}
 
       <ProductModal
         product={selectedProduct}
@@ -175,18 +273,36 @@ function App() {
       <Toast
         key={toastKey}
         show={showToast}
-        message="Agregado"
+        message={toastMessage}
         onClose={handleToastClose}
       />
 
       <LoginModal
         show={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={(loggedInUser) => {
-          setUser(loggedInUser);
-          setShowLoginModal(false);
-        }}
+        onClose={handleCloseLogin}
+        onLoginSuccess={handleLoginSuccess}
       />
+
+      {/* Se montan solo cuando están abiertos y hay sesión: cada apertura arranca con datos frescos */}
+      {user && showCheckout && (
+        <CheckoutModal
+          user={user}
+          cart={cart}
+          onClose={handleCloseCheckout}
+          onOrderCreated={handleOrderCreated}
+          onOpenOrders={handleOpenOrders}
+          onSessionExpired={handleSessionExpired}
+        />
+      )}
+
+      {user && showOrders && (
+        <MyOrdersModal
+          user={user}
+          onClose={handleCloseOrders}
+          onSessionExpired={handleSessionExpired}
+          onStockChanged={refreshProducts}
+        />
+      )}
     </>
   );
 }

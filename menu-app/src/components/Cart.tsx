@@ -5,9 +5,10 @@ interface Props {
   deleteProduct: (productID: number) => void
   incrementProduct: (productID: number) => void
   ressProduct: (productID: number) => void
+  onCheckout: () => void
 }
 
-function Cart({ cart, deleteProduct, incrementProduct, ressProduct }: Props) {
+function Cart({ cart, deleteProduct, incrementProduct, ressProduct, onCheckout }: Props) {
 
   const total = cart.reduce((acc, item) => { return acc + (item.product.price * item.quantity) }, 0);
 
@@ -51,6 +52,7 @@ function Cart({ cart, deleteProduct, incrementProduct, ressProduct }: Props) {
                         type="button"
                         className="qty-btn"
                         onClick={() => incrementProduct(item.product.id)}
+                        disabled={item.quantity >= item.product.stock}
                         aria-label={`Aumentar cantidad de ${item.product.title}`}
                       >
                         +
@@ -78,8 +80,7 @@ function Cart({ cart, deleteProduct, incrementProduct, ressProduct }: Props) {
               <button
                 type="button"
                 className="btn btn-red-gradient w-100"
-                disabled
-                title="Checkout no implementado todavía"
+                onClick={onCheckout}
               >
                 Finalizar compra
               </button>

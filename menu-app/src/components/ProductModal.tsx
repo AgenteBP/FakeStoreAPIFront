@@ -88,9 +88,14 @@ function ProductModal({ product, onClose, addToCart }: Props) {
                       onClick={() => {
                         addToCart(product);
                       }}
-                      aria-label={`Agregar ${product.title} al carrito`}
+                      disabled={product.stock === 0}
+                      aria-label={
+                        product.stock === 0
+                          ? `${product.title} sin stock`
+                          : `Agregar ${product.title} al carrito`
+                      }
                     >
-                      Agregar al carrito
+                      {product.stock === 0 ? "Sin stock" : "Agregar al carrito"}
                     </button>
                   </div>
                 </div>
