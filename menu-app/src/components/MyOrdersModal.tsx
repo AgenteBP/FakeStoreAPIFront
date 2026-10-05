@@ -3,13 +3,12 @@ import type { AuthUser } from "../types/AuthUser";
 import type { Order } from "../types/Order";
 import { isUnauthorized } from "../services/api";
 import { cancelOrder, getMyOrders, payOrder } from "../services/orderService";
+import { useAuth, useCurrentUser } from "../hooks/useAuth";
 import Modal from "./Modal";
 import OrderCard from "./OrderCard";
 
 interface MyOrdersModalProps {
-  user: AuthUser;
   onClose: () => void;
-  onSessionExpired: () => void;
   // Pagar o cancelar cambia el stock: avisa para recargar el catálogo
   onStockChanged: () => void;
 }
@@ -18,14 +17,16 @@ interface MyOrdersModalProps {
 // Así se ve cómo avanzan solas (pago, envío y entrega simulados) sin recargar la página.
 const REFRESH_INTERVAL_MS = 15_000;
 
-function MyOrdersModal({ user, onClose, onSessionExpired, onStockChanged }: MyOrdersModalProps) {
+function MyOrdersModal({ onClose, onStockChanged }: MyOrdersModalProps) {
+  const user = useCurrentUser();
+  const { expireSession } = useAuth();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState("");
   const [busyOrderId, setBusyOrderId] = useState<number | null>(null);
 
   const handleError = (err: unknown) => {
     if (isUnauthorized(err)) {
-      onSessionExpired();
+      expireSession();
       return;
     }
     setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
@@ -38,7 +39,7 @@ function MyOrdersModal({ user, onClose, onSessionExpired, onStockChanged }: MyOr
         .then(setOrders)
         .catch((err) => {
           if (isUnauthorized(err)) {
-            onSessionExpired();
+            expireSession();
             return;
           }
           setError(err instanceof Error ? err.message : "No se pudieron cargar tus compras.");
@@ -48,7 +49,7 @@ function MyOrdersModal({ user, onClose, onSessionExpired, onStockChanged }: MyOr
     loadOrders();
     const intervalId = setInterval(loadOrders, REFRESH_INTERVAL_MS);
     return () => clearInterval(intervalId);
-  }, [user, onSessionExpired]);
+  }, [user, expireSession]);
 
   // Paga o cancela una compra y reemplaza esa compra en la lista con lo que devuelve el backend
   const runAction = async (idOrder: number, action: (user: AuthUser, idOrder: number) => Promise<Order>) => {

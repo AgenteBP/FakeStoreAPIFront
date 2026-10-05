@@ -1,23 +1,22 @@
 import { useEffect, useState } from "react";
-import type { AuthUser } from "../../types/AuthUser";
 import type { StockItem } from "../../types/Admin";
 import { getStock, restockProduct } from "../../services/adminService";
 import { useApiError } from "../../hooks/useApiError";
+import { useCurrentUser } from "../../hooks/useAuth";
 
 interface AdminStockProps {
-  admin: AuthUser;
-  onSessionExpired: () => void;
   onStockChanged: () => void;
 }
 
 // Stock de todos los productos (los de menos disponible primero) y reposición por producto
-function AdminStock({ admin, onSessionExpired, onStockChanged }: AdminStockProps) {
+function AdminStock({ onStockChanged }: AdminStockProps) {
+  const admin = useCurrentUser();
   const [stock, setStock] = useState<StockItem[] | null>(null);
   // Lo que el ADMIN escribió en el campo "Unidades" de cada producto, por id de producto
   const [quantities, setQuantities] = useState<Record<number, string>>({});
   const [busyId, setBusyId] = useState<number | null>(null);
   const [notice, setNotice] = useState("");
-  const { error, handleError, clearError } = useApiError(onSessionExpired);
+  const { error, handleError, clearError } = useApiError();
 
   useEffect(() => {
     getStock(admin).then(setStock).catch(handleError);

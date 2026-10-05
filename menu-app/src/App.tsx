@@ -3,8 +3,8 @@ import type { Product } from "./types/Product";
 import type { AuthUser } from "./types/AuthUser";
 
 import { useCart } from "./hooks/useCart";
+import { useAuth } from "./hooks/useAuth";
 import { getProducts } from "./services/productService";
-import { logout, restoreSession } from "./services/authService";
 import Navbar from "./components/Navbar";
 import ProductCard from "./components/ProductCard";
 import ProductModal from "./components/ProductModal";
@@ -27,13 +27,13 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [showLoginModal, setShowLoginModal] = useState(false);
   // Producto que se quiso agregar sin estar logueado: se agrega al carrito apenas inicia sesión
   const [pendingProduct, setPendingProduct] = useState<Product | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showOrders, setShowOrders] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+
+  const { user, isLoginOpen, signIn, signOut, openLogin, closeLogin } = useAuth();
 
   const {
     cart,
@@ -62,17 +62,16 @@ function App() {
     (product: Product) => {
       if (!user) {
         setPendingProduct(product);
-        setShowLoginModal(true);
+        openLogin();
         return;
       }
       addAndNotify(product);
     },
-    [user, addAndNotify]
+    [user, addAndNotify, openLogin]
   );
 
   const handleLoginSuccess = (loggedInUser: AuthUser) => {
-    setUser(loggedInUser);
-    setShowLoginModal(false);
+    signIn(loggedInUser);
     if (pendingProduct) {
       addAndNotify(pendingProduct);
       setPendingProduct(null);
@@ -80,30 +79,20 @@ function App() {
   };
 
   const handleCloseLogin = useCallback(() => {
-    setShowLoginModal(false);
+    closeLogin();
     setPendingProduct(null);
-  }, []);
+  }, [closeLogin]);
 
-  // El carrito es de cada usuario: al cerrar sesión se vacía
+  // El carrito es de cada usuario: al cerrar sesión se vacía.
+  // Si en cambio vence el token (expireSession en AuthProvider), el carrito se conserva
+  // y, al volver a iniciar sesión, se sigue en la pantalla donde estaba.
   const handleLogout = () => {
-    logout();
-    setUser(null);
+    signOut();
     clearCart();
     setShowCheckout(false);
     setShowOrders(false);
     setShowAdmin(false);
   };
-
-  // El backend respondió 401 (el token venció): se cierra la sesión y se pide login de nuevo.
-  // A diferencia de handleLogout, el carrito se conserva para que pueda seguir comprando.
-  const handleSessionExpired = useCallback(() => {
-    logout();
-    setUser(null);
-    setShowCheckout(false);
-    setShowOrders(false);
-    setShowAdmin(false);
-    setShowLoginModal(true);
-  }, []);
 
   // Vuelve a traer el catálogo para mostrar el stock actualizado (después de comprar, pagar o cancelar).
   // Si falla, se sigue mostrando el catálogo anterior.
@@ -165,13 +154,6 @@ function App() {
       });
   }, []);
 
-  // Si había una sesión guardada (token en localStorage) y sigue vigente, se recupera
-  useEffect(() => {
-    restoreSession().then((restoredUser) => {
-      if (restoredUser) setUser(restoredUser);
-    });
-  }, []);
-
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-100">
@@ -201,8 +183,6 @@ function App() {
         ressProduct={ressProduct}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
-        user={user}
-        onOpenLogin={() => setShowLoginModal(true)}
         onLogout={handleLogout}
         onCheckout={() => setShowCheckout(true)}
         onOpenOrders={handleOpenOrders}
@@ -212,9 +192,7 @@ function App() {
       {/* El panel reemplaza al catálogo mientras está abierto; solo existe para un ADMIN logueado */}
       {user?.role === "ADMIN" && showAdmin ? (
         <AdminPanel
-          admin={user}
           onBackToStore={() => setShowAdmin(false)}
-          onSessionExpired={handleSessionExpired}
           onStockChanged={refreshProducts}
         />
       ) : (
@@ -278,7 +256,7 @@ function App() {
       />
 
       <LoginModal
-        show={showLoginModal}
+        show={isLoginOpen}
         onClose={handleCloseLogin}
         onLoginSuccess={handleLoginSuccess}
       />
@@ -286,20 +264,16 @@ function App() {
       {/* Se montan solo cuando están abiertos y hay sesión: cada apertura arranca con datos frescos */}
       {user && showCheckout && (
         <CheckoutModal
-          user={user}
           cart={cart}
           onClose={handleCloseCheckout}
           onOrderCreated={handleOrderCreated}
           onOpenOrders={handleOpenOrders}
-          onSessionExpired={handleSessionExpired}
         />
       )}
 
       {user && showOrders && (
         <MyOrdersModal
-          user={user}
           onClose={handleCloseOrders}
-          onSessionExpired={handleSessionExpired}
           onStockChanged={refreshProducts}
         />
       )}

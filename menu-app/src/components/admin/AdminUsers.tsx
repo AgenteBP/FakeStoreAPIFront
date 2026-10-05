@@ -1,24 +1,23 @@
 import { useEffect, useState } from "react";
 import type { AdminUser } from "../../types/Admin";
-import type { AuthUser } from "../../types/AuthUser";
 import { activateUser, deactivateUser, getUsers } from "../../services/adminService";
 import { useApiError } from "../../hooks/useApiError";
+import { useCurrentUser } from "../../hooks/useAuth";
 
 interface AdminUsersProps {
-  admin: AuthUser;
-  onSessionExpired: () => void;
   // La baja cancela compras y devuelve stock: avisa para recargar el catálogo
   onStockChanged: () => void;
 }
 
 // Lista de usuarios con baja lógica y reactivación
-function AdminUsers({ admin, onSessionExpired, onStockChanged }: AdminUsersProps) {
+function AdminUsers({ onStockChanged }: AdminUsersProps) {
+  const admin = useCurrentUser();
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   // Usuario al que se le tocó "Dar de baja" y espera confirmación
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [notice, setNotice] = useState("");
-  const { error, handleError, clearError } = useApiError(onSessionExpired);
+  const { error, handleError, clearError } = useApiError();
 
   useEffect(() => {
     getUsers(admin).then(setUsers).catch(handleError);

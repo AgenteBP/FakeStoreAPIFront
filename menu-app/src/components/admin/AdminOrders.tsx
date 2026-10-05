@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import type { AuthUser } from "../../types/AuthUser";
 import type { Order, OrderStatus } from "../../types/Order";
 import { changeOrderStatus, getAllOrders } from "../../services/adminService";
 import { useApiError } from "../../hooks/useApiError";
+import { useCurrentUser } from "../../hooks/useAuth";
 import { canAdminCancel, formatOrderDate, getNextStatus, getStatusLabel } from "../../utils/orderStatus";
 
 interface AdminOrdersProps {
-  admin: AuthUser;
-  onSessionExpired: () => void;
   // Cancelar devuelve stock: avisa para recargar el catálogo
   onStockChanged: () => void;
 }
@@ -18,11 +16,12 @@ const STATUS_FILTERS: OrderStatus[] = ["PENDING", "PAID", "SHIPPED", "DELIVERED"
 const REFRESH_INTERVAL_MS = 15_000;
 
 // Todas las compras de la tienda. El ADMIN puede pasar cada una al siguiente paso o cancelarla.
-function AdminOrders({ admin, onSessionExpired, onStockChanged }: AdminOrdersProps) {
+function AdminOrders({ onStockChanged }: AdminOrdersProps) {
+  const admin = useCurrentUser();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "ALL">("ALL");
   const [busyId, setBusyId] = useState<number | null>(null);
-  const { error, handleError, clearError } = useApiError(onSessionExpired);
+  const { error, handleError, clearError } = useApiError();
 
   useEffect(() => {
     const loadOrders = () => getAllOrders(admin).then(setOrders).catch(handleError);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CartItem } from "../types/CartItem";
-import type { AuthUser } from "../types/AuthUser";
+import { useAuth } from "../hooks/useAuth";
 import Cart from "./Cart";
 
 interface NavbarProps {
@@ -11,8 +11,6 @@ interface NavbarProps {
   ressProduct: (productID: number) => void;
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  user: AuthUser | null;
-  onOpenLogin: () => void;
   onLogout: () => void;
   onCheckout: () => void;
   onOpenOrders: () => void;
@@ -27,13 +25,12 @@ function Navbar({
   ressProduct,
   searchTerm,
   onSearchChange,
-  user,
-  onOpenLogin,
   onLogout,
   onCheckout,
   onOpenOrders,
   onOpenAdmin,
 }: NavbarProps) {
+  const { user, openLogin } = useAuth();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -112,7 +109,7 @@ function Navbar({
                 type="button"
                 className="navbar-account-btn"
                 onClick={() =>
-                  user ? setIsAccountMenuOpen((prev) => !prev) : onOpenLogin()
+                  user ? setIsAccountMenuOpen((prev) => !prev) : openLogin()
                 }
                 aria-label={user ? `Cuenta de ${user.name}` : "Iniciar sesión"}
                 title={user ? user.name : "Iniciar sesión"}

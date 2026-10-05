@@ -1,29 +1,29 @@
 import { useEffect, useState } from "react";
 import type { Address, NewAddress } from "../types/Address";
-import type { AuthUser } from "../types/AuthUser";
 import type { CartItem } from "../types/CartItem";
 import type { Order } from "../types/Order";
 import { isUnauthorized } from "../services/api";
 import { createAddress, getAddresses } from "../services/addressService";
 import { createOrder, payOrder } from "../services/orderService";
 import { getStatusLabel } from "../utils/orderStatus";
+import { useAuth, useCurrentUser } from "../hooks/useAuth";
 import Modal from "./Modal";
 import AddressForm from "./AddressForm";
 
 interface CheckoutModalProps {
-  user: AuthUser;
   cart: CartItem[];
   onClose: () => void;
   // Se llama apenas el backend crea la compra (para vaciar el carrito y actualizar el stock)
   onOrderCreated: () => void;
   onOpenOrders: () => void;
-  onSessionExpired: () => void;
 }
 
 // Checkout en dos pasos:
 //   1. Elegir (o cargar) la dirección de envío y confirmar → POST /api/orders (queda PENDING).
 //   2. Confirmación: se puede pagar en el momento (pago simulado) o ir a "Mis compras".
-function CheckoutModal({ user, cart, onClose, onOrderCreated, onOpenOrders, onSessionExpired }: CheckoutModalProps) {
+function CheckoutModal({ cart, onClose, onOrderCreated, onOpenOrders }: CheckoutModalProps) {
+  const user = useCurrentUser();
+  const { expireSession } = useAuth();
   const [addresses, setAddresses] = useState<Address[] | null>(null);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
@@ -35,7 +35,7 @@ function CheckoutModal({ user, cart, onClose, onOrderCreated, onOpenOrders, onSe
   // Cualquier otro error (ej. 409 sin stock) se muestra y el carrito queda como estaba.
   const handleError = (err: unknown) => {
     if (isUnauthorized(err)) {
-      onSessionExpired();
+      expireSession();
       return;
     }
     setError(err instanceof Error ? err.message : "Ocurrió un error inesperado.");
@@ -51,12 +51,12 @@ function CheckoutModal({ user, cart, onClose, onOrderCreated, onOpenOrders, onSe
       })
       .catch((err) => {
         if (isUnauthorized(err)) {
-          onSessionExpired();
+          expireSession();
           return;
         }
         setError(err instanceof Error ? err.message : "No se pudieron cargar las direcciones.");
       });
-  }, [user, onSessionExpired]);
+  }, [user, expireSession]);
 
   const handleSaveAddress = async (newAddress: NewAddress) => {
     setSubmitting(true);

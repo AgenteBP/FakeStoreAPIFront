@@ -1,13 +1,10 @@
 import { useState } from "react";
-import type { AuthUser } from "../../types/AuthUser";
 import AdminUsers from "./AdminUsers";
 import AdminOrders from "./AdminOrders";
 import AdminStock from "./AdminStock";
 
 interface AdminPanelProps {
-  admin: AuthUser;
   onBackToStore: () => void;
-  onSessionExpired: () => void;
   onStockChanged: () => void;
 }
 
@@ -20,17 +17,17 @@ const TABS: { id: AdminTab; label: string }[] = [
 ];
 
 // Pantalla del ADMIN con tres pestañas. Cada pestaña carga sus datos al abrirse.
-function AdminPanel({ admin, onBackToStore, onSessionExpired, onStockChanged }: AdminPanelProps) {
+function AdminPanel({ onBackToStore, onStockChanged }: AdminPanelProps) {
   const [tab, setTab] = useState<AdminTab>("orders");
 
   const renderTab = () => {
     switch (tab) {
       case "users":
-        return <AdminUsers admin={admin} onSessionExpired={onSessionExpired} onStockChanged={onStockChanged} />;
+        return <AdminUsers onStockChanged={onStockChanged} />;
       case "orders":
-        return <AdminOrders admin={admin} onSessionExpired={onSessionExpired} onStockChanged={onStockChanged} />;
+        return <AdminOrders onStockChanged={onStockChanged} />;
       case "stock":
-        return <AdminStock admin={admin} onSessionExpired={onSessionExpired} onStockChanged={onStockChanged} />;
+        return <AdminStock onStockChanged={onStockChanged} />;
     }
   };
 
