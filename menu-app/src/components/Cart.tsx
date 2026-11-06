@@ -1,14 +1,11 @@
-import type { CartItem } from "../types/CartItem";
+import { useCartContext } from "../hooks/useCartContext";
 
 interface Props {
-  cart: CartItem[];
-  deleteProduct: (productID: number) => void
-  incrementProduct: (productID: number) => void
-  ressProduct: (productID: number) => void
   onCheckout: () => void
 }
 
-function Cart({ cart, deleteProduct, incrementProduct, ressProduct, onCheckout }: Props) {
+function Cart({ onCheckout }: Props) {
+  const { cart, deleteProduct, incrementProduct, ressProduct } = useCartContext();
 
   const total = cart.reduce((acc, item) => { return acc + (item.product.price * item.quantity) }, 0);
 

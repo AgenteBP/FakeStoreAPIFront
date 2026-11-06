@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
-import type { CartItem } from "../types/CartItem";
 import { useAuth } from "../hooks/useAuth";
+import { useCartContext } from "../hooks/useCartContext";
 import Cart from "./Cart";
 
 interface NavbarProps {
-  cart: CartItem[];
-  totalItems: number;
-  deleteProduct: (productID: number) => void;
-  incrementProduct: (productID: number) => void;
-  ressProduct: (productID: number) => void;
   searchTerm: string;
   onSearchChange: (value: string) => void;
   onLogout: () => void;
@@ -18,11 +13,6 @@ interface NavbarProps {
 }
 
 function Navbar({
-  cart,
-  totalItems,
-  deleteProduct,
-  incrementProduct,
-  ressProduct,
   searchTerm,
   onSearchChange,
   onLogout,
@@ -31,6 +21,7 @@ function Navbar({
   onOpenAdmin,
 }: NavbarProps) {
   const { user, openLogin } = useAuth();
+  const { totalItems } = useCartContext();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -201,10 +192,6 @@ function Navbar({
             </div>
 
             <Cart
-              cart={cart}
-              deleteProduct={deleteProduct}
-              incrementProduct={incrementProduct}
-              ressProduct={ressProduct}
               onCheckout={() => {
                 setIsCartOpen(false);
                 onCheckout();
