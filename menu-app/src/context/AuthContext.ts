@@ -10,6 +10,7 @@ export interface AuthContextValue {
   expireSession: () => void;
   openLogin: () => void;
   closeLogin: () => void;
+  isRestoring: boolean;
 }
 
 // Vale null fuera de <AuthProvider>: useAuth lo detecta y avisa con un error

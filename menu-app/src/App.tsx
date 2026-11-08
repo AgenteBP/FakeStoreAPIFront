@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import { Routes, Route, Navigate, useNavigate } from "react-router";
 import type { Product } from "./types/Product";
 import type { AuthUser } from "./types/AuthUser";
-
 import { useCartContext } from "./hooks/useCartContext";
 import { useAuth } from "./hooks/useAuth";
 import { useToast } from "./hooks/useToast";
@@ -23,12 +23,10 @@ function App() {
   const [pendingProduct, setPendingProduct] = useState<Product | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showOrders, setShowOrders] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-
-  const { user, isLoginOpen, signIn, signOut, openLogin, closeLogin } = useAuth();
-
+  const { user, isLoginOpen, signIn, signOut, openLogin, closeLogin, isRestoring } = useAuth();
   const { cart, addToCart, clearCart } = useCartContext();
   const { notify, toast } = useToast();
+  const navigate = useNavigate();
 
   const addAndNotify = useCallback(
     (product: Product) => {
@@ -72,7 +70,6 @@ function App() {
     clearCart();
     setShowCheckout(false);
     setShowOrders(false);
-    setShowAdmin(false);
   };
 
   // Vuelve a traer el catálogo para mostrar el stock actualizado (después de comprar, pagar o cancelar).
@@ -111,7 +108,7 @@ function App() {
       });
   }, []);
 
-  if (loading) {
+  if (loading || isRestoring) {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-100">
         <div className="spinner-border text-primary me-2" role="status">
@@ -138,24 +135,35 @@ function App() {
         onLogout={handleLogout}
         onCheckout={() => setShowCheckout(true)}
         onOpenOrders={handleOpenOrders}
-        onOpenAdmin={() => setShowAdmin(true)}
+        onOpenAdmin={() => navigate("/admin")}
       />
 
       {/* El panel reemplaza al catálogo mientras está abierto; solo existe para un ADMIN logueado */}
-      {user?.role === "ADMIN" && showAdmin ? (
-        <AdminPanel
-          onBackToStore={() => setShowAdmin(false)}
-          onStockChanged={refreshProducts}
+      <Routes>
+        <Route path="/admin"
+          element={user?.role === "ADMIN" ?
+            <AdminPanel
+              onBackToStore={() => navigate("/")}
+              onStockChanged={refreshProducts}
+            />
+            :
+            <Navigate to="/" replace />
+          }
         />
-      ) : (
 
-        <CatalogPage
-          products={products}
-          searchTerm={searchTerm}
-          onAddToCart={handleAddToCart}
+        <Route path="/"
+
+          element={
+            <CatalogPage
+              products={products}
+              searchTerm={searchTerm}
+              onAddToCart={handleAddToCart}
+            />
+          }
         />
-      )}
 
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
 
       <Toast
         key={toast.key}

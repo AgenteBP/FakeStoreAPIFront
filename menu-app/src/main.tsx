@@ -7,12 +7,15 @@ import './App.css'
 import App from './App.tsx'
 import AuthProvider from './context/AuthProvider.tsx'
 import CartProvider from './context/CartProvider.tsx'
+import { BrowserRouter } from 'react-router'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>
       <CartProvider>
-        <App />
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
       </CartProvider>
     </AuthProvider>
   </StrictMode>,

@@ -12,12 +12,13 @@ interface AuthProviderProps {
 function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
 
   // Si había una sesión guardada (token en localStorage) y sigue vigente, se recupera
   useEffect(() => {
     restoreSession().then((restoredUser) => {
       if (restoredUser) setUser(restoredUser);
-    });
+    }).finally(() => setIsRestoring(false));
   }, []);
 
   // useCallback: varios componentes usan estas funciones en las dependencias de sus useEffect,
@@ -42,8 +43,8 @@ function AuthProvider({ children }: AuthProviderProps) {
   const closeLogin = useCallback(() => setIsLoginOpen(false), []);
 
   const value = useMemo(
-    () => ({ user, isLoginOpen, signIn, signOut, expireSession, openLogin, closeLogin }),
-    [user, isLoginOpen, signIn, signOut, expireSession, openLogin, closeLogin]
+    () => ({ user, isLoginOpen, signIn, signOut, expireSession, openLogin, closeLogin, isRestoring }),
+    [user, isLoginOpen, signIn, signOut, expireSession, openLogin, closeLogin, isRestoring]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
