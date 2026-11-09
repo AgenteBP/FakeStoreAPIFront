@@ -10,9 +10,9 @@ import Navbar from "./components/Navbar";
 import Toast from "./components/Toast";
 import LoginModal from "./components/LoginModal";
 import CheckoutModal from "./components/CheckoutModal";
-import MyOrdersModal from "./components/MyOrdersModal";
 import AdminPanel from "./components/admin/AdminPanel";
 import CatalogPage from "./pages/CatalogPage";
+import OrderPage from "./pages/OrderPage";
 
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -22,7 +22,6 @@ function App() {
   // Producto que se quiso agregar sin estar logueado: se agrega al carrito apenas inicia sesión
   const [pendingProduct, setPendingProduct] = useState<Product | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [showOrders, setShowOrders] = useState(false);
   const { user, isLoginOpen, signIn, signOut, openLogin, closeLogin, isRestoring } = useAuth();
   const { cart, addToCart, clearCart } = useCartContext();
   const { notify, toast } = useToast();
@@ -63,13 +62,14 @@ function App() {
   }, [closeLogin]);
 
   // El carrito es de cada usuario: al cerrar sesión se vacía.
-  // Si en cambio vence el token (expireSession en AuthProvider), el carrito se conserva
-  // y, al volver a iniciar sesión, se sigue en la pantalla donde estaba.
+  // Si en cambio vence el token (expireSession en AuthProvider), el carrito se conserva y se abre
+  // el login. Las rutas protegidas (/orders y /admin) redirigen a "/" apenas user pasa a null,
+  // así que al volver a iniciar sesión se queda en el catálogo; el checkout, que es un modal,
+  // sí vuelve a aparecer.
   const handleLogout = () => {
     signOut();
     clearCart();
     setShowCheckout(false);
-    setShowOrders(false);
   };
 
   // Vuelve a traer el catálogo para mostrar el stock actualizado (después de comprar, pagar o cancelar).
@@ -87,14 +87,11 @@ function App() {
   };
 
   const handleCloseCheckout = useCallback(() => setShowCheckout(false), []);
-  const handleCloseOrders = useCallback(() => setShowOrders(false), []);
 
   const handleOpenOrders = () => {
     setShowCheckout(false);
-    setShowOrders(true);
+    navigate("/orders");
   };
-
-
 
   useEffect(() => {
     getProducts()
@@ -138,8 +135,10 @@ function App() {
         onOpenAdmin={() => navigate("/admin")}
       />
 
-      {/* El panel reemplaza al catálogo mientras está abierto; solo existe para un ADMIN logueado */}
+      {/* Lo que está afuera de <Routes> se ve en todas las páginas; adentro, cada URL muestra su página */}
       <Routes>
+        {/* Solo para ADMIN: sin sesión de admin (o si se cierra estando acá) redirige al catálogo.
+            replace evita que "atrás" vuelva a /admin y quede en un bucle de redirecciones. */}
         <Route path="/admin"
           element={user?.role === "ADMIN" ?
             <AdminPanel
@@ -152,7 +151,6 @@ function App() {
         />
 
         <Route path="/"
-
           element={
             <CatalogPage
               products={products}
@@ -162,6 +160,19 @@ function App() {
           }
         />
 
+        <Route path="/orders"
+          element={
+            user ?
+              <OrderPage
+                onBackToStore={() => navigate("/")}
+                onStockChanged={refreshProducts}
+              />
+              :
+              <Navigate to="/" replace />
+          }
+        />
+
+        {/* Cualquier otra URL (ej. /cualquiercosa) lleva al catálogo */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
@@ -188,12 +199,6 @@ function App() {
         />
       )}
 
-      {user && showOrders && (
-        <MyOrdersModal
-          onClose={handleCloseOrders}
-          onStockChanged={refreshProducts}
-        />
-      )}
     </>
   );
 }
