@@ -13,6 +13,8 @@ import CheckoutModal from "./components/CheckoutModal";
 import AdminPanel from "./components/admin/AdminPanel";
 import CatalogPage from "./pages/CatalogPage";
 import OrderPage from "./pages/OrderPage";
+import RequireAuth from "./routes/RequireAuth";
+import RequireAdmin from "./routes/RequireAdmin";
 
 function App() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -137,18 +139,17 @@ function App() {
 
       {/* Lo que está afuera de <Routes> se ve en todas las páginas; adentro, cada URL muestra su página */}
       <Routes>
-        {/* Solo para ADMIN: sin sesión de admin (o si se cierra estando acá) redirige al catálogo.
-            replace evita que "atrás" vuelva a /admin y quede en un bucle de redirecciones. */}
-        <Route path="/admin"
-          element={user?.role === "ADMIN" ?
-            <AdminPanel
-              onBackToStore={() => navigate("/")}
-              onStockChanged={refreshProducts}
-            />
-            :
-            <Navigate to="/" replace />
-          }
-        />
+        {/* Rutas protegidas: el guardia (RequireAdmin / RequireAuth) deja pasar o redirige al catálogo */}
+        <Route element={<RequireAdmin />}>
+          <Route path="/admin"
+            element={
+              <AdminPanel
+                onBackToStore={() => navigate("/")}
+                onStockChanged={refreshProducts}
+              />
+            }
+          />
+        </Route>
 
         <Route path="/"
           element={
@@ -160,17 +161,17 @@ function App() {
           }
         />
 
-        <Route path="/orders"
-          element={
-            user ?
+
+        <Route element={<RequireAuth />}>
+          <Route path="/orders"
+            element={
               <OrderPage
                 onBackToStore={() => navigate("/")}
                 onStockChanged={refreshProducts}
               />
-              :
-              <Navigate to="/" replace />
-          }
-        />
+            }
+          />
+        </Route>
 
         {/* Cualquier otra URL (ej. /cualquiercosa) lleva al catálogo */}
         <Route path="*" element={<Navigate to="/" replace />} />
