@@ -14,12 +14,12 @@ function ProductCard({ product, addToCart, onSelectProduct }: Props) {
       <div
         className="card h-100 product-card"
         style={{ cursor: "pointer" }}
-        onClick={() => onSelectProduct && onSelectProduct(product)}
+        onClick={() => onSelectProduct?.(product)}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
-            onSelectProduct && onSelectProduct(product);
+            onSelectProduct?.(product);
           }
         }}
       >

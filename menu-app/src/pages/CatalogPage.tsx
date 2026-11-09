@@ -4,6 +4,7 @@ import BannerCarousel from "../components/BannerCarousel";
 import FilterPanel from "../components/FilterPanel";
 import ProductCard from "../components/ProductCard";
 import ProductModal from "../components/ProductModal";
+import { useProductFilters } from "../hooks/useProductFilters";
 
 interface CatalogPageProps {
     products: Product[];                     // App lo carga y lo actualiza
@@ -14,41 +15,22 @@ interface CatalogPageProps {
 function CatalogPage({ products, searchTerm, onAddToCart }: CatalogPageProps) {
 
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-    const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
-
-    const handleToggleCategory = (category: string) => {
-        setSelectedCategories((prev) =>
-            prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
-        );
-    };
-
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-    const categories = Array.from(new Set(products.map((prod) => prod.category))).sort();
-    const productPrices = products.map((prod) => prod.price);
-    const minPrice = productPrices.length ? Math.floor(Math.min(...productPrices)) : 0;
-    const maxPrice = productPrices.length ? Math.ceil(Math.max(...productPrices)) : 0;
-    const effectivePriceRange: [number, number] = priceRange ?? [minPrice, maxPrice];
-
-    const filteredProducts = products.filter((prod) => {
-        const matchesSearch = prod.title.toLowerCase().includes(normalizedSearch);
-        const matchesCategory =
-            selectedCategories.length === 0 || selectedCategories.includes(prod.category);
-        const matchesPrice =
-            prod.price >= effectivePriceRange[0] && prod.price <= effectivePriceRange[1];
-        return matchesSearch && matchesCategory && matchesPrice;
-    });
+    const {
+        setPriceRange,
+        handleToggleCategory,
+        categories,
+        effectivePriceRange,
+        filteredProducts,
+        maxPrice,
+        minPrice,
+        selectedCategories
+    } = useProductFilters(products, searchTerm);
 
     return (
         <>
             <BannerCarousel />
 
             <main className="container-fluid px-4 py-4">
-                {/* {normalizedSearch === "" && (
-              <h1 className="text-center fs-2 fw-bold mb-4 text-dark">
-                Catálogo de Productos
-              </h1>
-            )} */}
 
                 <div className="row g-2">
                     <div className="col-12 col-md-auto">

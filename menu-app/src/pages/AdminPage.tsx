@@ -1,9 +1,9 @@
 import { useState } from "react";
-import AdminUsers from "./AdminUsers";
-import AdminOrders from "./AdminOrders";
-import AdminStock from "./AdminStock";
+import AdminUsers from "../components/admin/AdminUsers";
+import AdminOrders from "../components/admin/AdminOrders";
+import AdminStock from "../components/admin/AdminStock";
 
-interface AdminPanelProps {
+interface AdminPageProps {
   onBackToStore: () => void;
   onStockChanged: () => void;
 }
@@ -17,7 +17,7 @@ const TABS: { id: AdminTab; label: string }[] = [
 ];
 
 // Pantalla del ADMIN con tres pestañas. Cada pestaña carga sus datos al abrirse.
-function AdminPanel({ onBackToStore, onStockChanged }: AdminPanelProps) {
+function AdminPage({ onBackToStore, onStockChanged }: AdminPageProps) {
   const [tab, setTab] = useState<AdminTab>("orders");
 
   const renderTab = () => {
@@ -60,4 +60,4 @@ function AdminPanel({ onBackToStore, onStockChanged }: AdminPanelProps) {
   );
 }
 
-export default AdminPanel;
+export default AdminPage;

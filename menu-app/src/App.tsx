@@ -10,7 +10,7 @@ import Navbar from "./components/Navbar";
 import Toast from "./components/Toast";
 import LoginModal from "./components/LoginModal";
 import CheckoutModal from "./components/CheckoutModal";
-import AdminPanel from "./components/admin/AdminPanel";
+import AdminPage from "./pages/AdminPage";
 import CatalogPage from "./pages/CatalogPage";
 import OrderPage from "./pages/OrderPage";
 import RequireAuth from "./routes/RequireAuth";
@@ -143,7 +143,7 @@ function App() {
         <Route element={<RequireAdmin />}>
           <Route path="/admin"
             element={
-              <AdminPanel
+              <AdminPage
                 onBackToStore={() => navigate("/")}
                 onStockChanged={refreshProducts}
               />

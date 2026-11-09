@@ -1,6 +1,6 @@
 # menu-app
 
-App de catálogo/carrito de compras. React 19 + TypeScript + Vite, estilos con Bootstrap 5.
+App de catálogo/carrito de compras. React 19 + TypeScript + Vite, rutas con React Router 7, estilos con Bootstrap 5.
 
 ## Comandos
 
@@ -11,9 +11,15 @@ App de catálogo/carrito de compras. React 19 + TypeScript + Vite, estilos con B
 
 ## Estructura
 
-- `src/components/` — componentes de UI (Cart, Navbar, ProductCard, ProductModal)
-- `src/hooks/` — hooks, ej. `useCart.ts` (lógica del carrito)
-- `src/types/` — tipos compartidos: `Product.ts`, `CartItem.ts`
+- `src/App.tsx` — estado global de la app (productos, búsqueda, checkout), Navbar, modales y tabla de rutas (`/`, `/orders`, `/admin`)
+- `src/pages/` — lo que muestra cada ruta: `CatalogPage`, `OrderPage`, `AdminPage`
+- `src/routes/` — guardias de rutas protegidas con `<Outlet />`: `RequireAuth`, `RequireAdmin`
+- `src/components/` — componentes de UI (Cart, Navbar, ProductCard, modales...); `components/admin/` son las secciones de `AdminPage`
+- `src/context/` — contextos y providers: `AuthContext`/`AuthProvider` (sesión y modal de login), `CartContext`/`CartProvider` (carrito compartido)
+- `src/hooks/` — `useCart` (lógica del carrito), `useProductFilters` (filtros del catálogo), `useAuth`/`useCurrentUser` y `useCartContext` (leen los contextos), `useToast`, `useApiError` (401 → cierra la sesión)
+- `src/services/` — llamadas al backend (`api.ts` toma la URL de `VITE_API_URL`)
+- `src/types/` — tipos compartidos: `Product`, `CartItem`, `AuthUser`, `Order`, etc.
+- `src/utils/` — funciones puras (validaciones, textos de estados de compra)
 - `src/assets/` — imágenes
 
 ## Reglas y skills (`.agents/`)
